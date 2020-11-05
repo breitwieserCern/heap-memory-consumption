@@ -1,5 +1,4 @@
 #define _GNU_SOURCE
-#include "mem-trace.h"
 
 // based on: https://stackoverflow.com/questions/6083337/overriding-malloc-using-the-ld-preload-mechanism
 #include <dlfcn.h>
@@ -7,7 +6,34 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-MemTrace kMemTrace = {0, 0, 0};
+typedef struct {
+   int heap_size; 
+   int offset;
+   int peak_heap_size;
+} MemTrace;
+
+static MemTrace kMemTrace = {0, 0, 0};
+
+void Allocate(int size) {
+  kMemTrace.heap_size += size; 
+  int diff = kMemTrace.heap_size - kMemTrace.offset;
+  if (diff > kMemTrace.peak_heap_size) {
+    kMemTrace.peak_heap_size = diff;
+  }
+}
+
+void Deallocate(int size) {
+  kMemTrace.heap_size -= size; 
+}
+
+void StartPeakHeapSizeMeasurement() {
+   kMemTrace.peak_heap_size = 0;
+   kMemTrace.offset = kMemTrace.heap_size;
+}
+
+int GetPeakHeapSize() {
+  return kMemTrace.peak_heap_size;
+}
 
 char tmpbuff[10240];
 unsigned long tmppos = 0;
