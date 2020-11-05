@@ -15,7 +15,7 @@ typedef struct {
 static MemTrace kMemTrace = {0, 0, 0};
 static unsigned kPtrSize = sizeof(int*);
 
-void Allocate(int size) {
+void IncreaseHeapSize(int size) {
   kMemTrace.heap_size += size; 
   int diff = kMemTrace.heap_size - kMemTrace.offset;
   if (diff > kMemTrace.peak_heap_size) {
@@ -23,7 +23,7 @@ void Allocate(int size) {
   }
 }
 
-void Deallocate(int size) {
+void DecreaseHeapSize(int size) {
   kMemTrace.heap_size -= size; 
 }
 
@@ -88,15 +88,19 @@ void *malloc(size_t size) {
       }
     }
   }
-  Allocate(size);
-  void *ptr = real_malloc(size);
-  return ptr;
+  IncreaseHeapSize(size);
+  void *ptr = real_malloc(size + kPtrSize);
+  *((size_t*) ptr) = size;
+  return ptr + kPtrSize;
 }
 
 void free(void *ptr) {
   if (ptr >= (void *)tmpbuff && ptr <= (void *)(tmpbuff + tmppos)) {
     fprintf(stdout, "freeing temp memory\n");
   } else {
+    ptr -= kPtrSize;
+    size_t size = *((size_t*) ptr);
+    DecreaseHeapSize(size);
     real_free(ptr);
   }
 }
